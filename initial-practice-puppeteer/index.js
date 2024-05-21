@@ -1,56 +1,82 @@
 import puppeteer from "puppeteer";
 
-const getQuotes = async () => {
-  // Start a Puppeteer session with:
-  // - a visible browser (`headless: false` - easier to debug because you'll see the browser in action)
-  // - no default viewport (`defaultViewport: null` - website page will be in full width and height)
-  const browser = await puppeteer.launch({
-    headless: false,
-    defaultViewport: null,
-  });
-
-  // Open a new page
+(async () => {
+  // Launch the browser and open a new blank page
+  const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
-  // On this new page:
-  // - open the "http://quotes.toscrape.com/" website
-  // - wait until the dom content is loaded (HTML is ready)
-  await page.goto("http://quotes.toscrape.com/", {
-    waitUntil: "domcontentloaded",
-  });
+  // Navigate the page to a URL
+  await page.goto("https://saltlakecity.craigslist.org/search/cta");
 
-  // Get page data
-  const quotes = await page.evaluate(() => {
-    // Fetch the first element with class "quote"
-    // Get the displayed text and returns it
-    const quoteList = document.querySelectorAll(".quote");
+  // Set screen size
+  await page.setViewport({ width: 1080, height: 1024 });
 
-    // Convert the quoteList to an iterable array
-    // For each quote fetch the text and author
-    return Array.from(quoteList).map((quote) => {
-      // Fetch the sub-elements from the previously fetched quote element
-      // Get the displayed text and return it (`.innerText`)
-      const text = quote.querySelector(".text").innerText;
-      const author = quote.querySelector(".author").innerText;
+  const searchXpath =
+    'xpath///div[contains(@class, "cl-query-with-search-suggest")]//input';
 
-      return { text, author };
-    });
-  });
+  // Wait for the selector
+  await page.waitForSelector(searchXpath);
 
-  // Display the quotes
-  console.log(quotes);
-    // Click on the "Next page" button
-  // await page.click(".pager > .next > a");
-  try {
-    await page.click(".DOGBUTT");
-  } catch (e) {
-    console.log(e)
-  }
+  // Type into search box
+  await page.type(searchXpath, "tesla model 3");
+
+  // Press Enter
+  await page.keyboard.press("Enter");
+
+  // Optional: Wait for results to load or some specific action
+  await page.waitForNavigation();
+
+  const listItemSelector =
+    'xpath///div[contains(@class, "cl-results-page")]//ol/li';
+
+  // Get the list of items
+  const listItems = await page.$$(listItemSelector);
+  const filteredItems = [];
+
+  // // Iterate through the list items
+  for (let i = 0; i < listItems.length; i++) {
+    // Get the text content of the list item
+    const text = await page.evaluate(
+      (element) => element.title,
+      listItems[i]
+    );
+    // console.log(text)
   
+  // Check if the text matches the specific text you are looking for
+    if (text.toLowerCase().includes("tesla")) {
+      // //title 
+      // //price 
+      // //miles
+      // //link
+      const car = {
+        title : '',
+        price : '',
+        miles: '', 
+        link: ''
+      }
+      //getting miles to put into the car object
+      const milesContainer = await listItems[i].$('.meta')
+      const milesString = await milesContainer.evaluate(e => e.innerHTML)
+      const splitMiles = milesString.split('<span class="separator">·</span>')
+      car.miles = splitMiles[1]
 
-//   // Close the browser
-  // await browser.close();
-};
+      //getting the price to put into the car object
+      const price = await listItems[i].$('.priceinfo')
+      car.price = await price.evaluate(e => e.innerHTML)
+      
+      //getting the href link to the page for the car to put in car object
+      const link = await listItems[i].$('a')
+      car.link = await link.evaluate(e => e.getAttribute('href'))
 
-// Start the scraping
-getQuotes();
+      //getting the title to put in the car object
+      car.title = await page.evaluate(
+        (element) => element.title,
+        listItems[i]
+      );
+      
+      
+      filteredItems.push(car);
+    }
+}
+  console.log(filteredItems);
+})();
