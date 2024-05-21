@@ -3,7 +3,7 @@ import puppeteer from "puppeteer";
 const getQuotes = async () => {
   // Start a Puppeteer session with:
   // - a visible browser (`headless: false` - easier to debug because you'll see the browser in action)
-  // - no default viewport (`defaultViewport: null` - website page will in full width and height)
+  // - no default viewport (`defaultViewport: null` - website page will be in full width and height)
   const browser = await puppeteer.launch({
     headless: false,
     defaultViewport: null,
@@ -22,21 +22,34 @@ const getQuotes = async () => {
   // Get page data
   const quotes = await page.evaluate(() => {
     // Fetch the first element with class "quote"
-    const quote = document.querySelector(".quote");
+    // Get the displayed text and returns it
+    const quoteList = document.querySelectorAll(".quote");
 
-    // Fetch the sub-elements from the previously fetched quote element
-    // Get the displayed text and return it (`.innerText`)
-    const text = quote.querySelector(".text").innerText;
-    const author = quote.querySelector(".author").innerText;
+    // Convert the quoteList to an iterable array
+    // For each quote fetch the text and author
+    return Array.from(quoteList).map((quote) => {
+      // Fetch the sub-elements from the previously fetched quote element
+      // Get the displayed text and return it (`.innerText`)
+      const text = quote.querySelector(".text").innerText;
+      const author = quote.querySelector(".author").innerText;
 
-    return { text, author };
+      return { text, author };
+    });
   });
 
   // Display the quotes
   console.log(quotes);
+    // Click on the "Next page" button
+  // await page.click(".pager > .next > a");
+  try {
+    await page.click(".DOGBUTT");
+  } catch (e) {
+    console.log(e)
+  }
+  
 
-  // Close the browser
-  await browser.close();
+//   // Close the browser
+  // await browser.close();
 };
 
 // Start the scraping
